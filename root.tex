@@ -15,11 +15,22 @@ University of Nevada, Reno}
 \maketitle
 
 \begin{abstract}
-In this paper we will discuss the State estimation sections of the Multirotor Aerial Vehicles paper~\cite{6289431}.
+In this paper we will discuss the State estimation sections of the Multirotor Aerial Vehicles paper~\cite{6289431}. State estimation is an important aspect of robotics as a whole. State estimation is used to understand the true state of environment based on control inputs to the system as well as the sensor readings of a given robot. In the case of multi-rotor aircraft state estimation is most popularly used for localization. Localizing an aircraft allows for robust control of an aircraft as well as complex behaviors that can be implemented when this knowledge is present. This paper will summarize and review the state estimation and perception sections of Multirotor Aerial Vehicles paper \cite{6289431}.
 \end{abstract}
 
 \section{Introduction}
-this is my introduction
+State estimation with regard to multi-rotor aircraft commonly describes the process of estimating the height, attitude, angular velocity, and linear velocity. These parameters provide significant information to understand the state of the aircraft as well as provide state update information to control systems. The main sensors responsible for measuring these effects of the environment are IMU (Inertial Measurement Unit), and GPS system (Global Positioning Satellite).
+
+An IMU in general provides the measured angular acceleration, linear accelerations, and 3-axis compass. These measurements are determined using a 3-axis accelerometer, 3-axis gyroscope, and 3-axis magnetometer.
+
+A GPS sensor is used to link against the global satellite position system surrounding the earth in geosynchronous orbit. These sensors connect to several (at least 3) satellites to acquire an absolute position relative to some global earth locked space. The most common of these position representation is LLA (Latitude, Longitude, and Altitude). This information can be used to prevent and INS (Inertial Navigation System) from drifting from the true absolute position with respect to the earth. A GPS is an important sensor in aerial robotics to properly localize a system without drifting drastically.
+
+Other sensors are used to accomplish similar goals as the IMU, such as camera based vision algorithms, Kinect sensors, and laser range finders. Many of these sensors have shown promising results in other fields of robotics. The main limitation from adding these sensors to aerial vehicle platforms is the computation complexity of processing sensor data and the high weight on the small drone platforms.
+
+The remaining of this paper will summarize and review the different section of \cite{6289431} that deal with state estimation.
+
+\section{Attitude}
+
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs/master}
