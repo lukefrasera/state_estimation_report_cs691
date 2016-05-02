@@ -4,6 +4,7 @@
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{amsmath}
+\usepackage{flushend}
 
 \DeclareGraphicsExtensions{.pdf, .jpeg, .png, .jpg}
 \graphicspath{{images/}}
@@ -27,9 +28,100 @@ A GPS sensor is used to link against the global satellite position system surrou
 
 Other sensors are used to accomplish similar goals as the IMU, such as camera based vision algorithms, Kinect sensors, and laser range finders. Many of these sensors have shown promising results in other fields of robotics. The main limitation from adding these sensors to aerial vehicle platforms is the computation complexity of processing sensor data and the high weight on the small drone platforms.
 
-The remaining of this paper will summarize and review the different section of \cite{6289431} that deal with state estimation.
+The remaining of this paper will summarize and review other modern techniques for state estimation from \cite{6289431}.
 
-\section{Attitude}
+\section{Pose \& Localization}
+Estimating the pose of a drone is a difficult task. Sensing in the real-world is noisy and biased to many environmental changes. To deal with the changes in the environment sensor modeling and estimation is an important aspect to maintain smooth control.
+
+The IMU is the main sensor used to estimate the localization of a drone in real-time. A typical IMU contains a three-axis rate gyro, three-axis accelerometer, and three-axis magnetometer \cite{6289431}. These three sensors are responsible for the state estimation of the drone.
+
+\subsection{Attitude}
+The attitude of a drone is the estimate of the orientation of the drone in time. The gyroscope is used to estimate the attitude of the drone from the angular velocities. Equation~\ref{eq:angularrates} represents a sensor model for the IMU's measurement of the angular rates of drone $\Omega$.
+\begin{equation}
+\label{eq:angularrates}
+\Omega_{IMU} = \Omega + b_\Omega + \eta \in \{B\}
+\end{equation}
+In equation~\ref{eq:angularrates} $\Omega$ represents the true angular rates of the MAV system. IMU's due to environmental changes have biases introduced to the system that cause errors in the estimate. $b_\Omega$ is the bias term that deals with a constant bias on the system. Real-world sensing is a noisy operation and the IMU will have white noise associated with its measurements. The $\eta$ represents the noise present in the sensor reading of the IMU.
+
+Equation~\ref{eq:linearaccel} defines a model of the accelerometer measurements. This model similar to \ref{eq:angularrates} takes into account sensor noise and bias. With this a more accurate understanding of the acceleration of the drone can be understood.
+\begin{equation}
+\label{eq:linearaccel}
+a_{IMU} = R^T(\dot{v} - g\vec{z}) + b_a + \eta_a \in \{B\}
+\end{equation}
+
+Equation~\ref{eq:magnet} represents the magnetometer measurements from the environment. The magnetometer is used to determine the absolute attitude of the drone. This is very important information as an absolute estimate of the orientation is essential for accurate drone control. An absolute attitude estimate that does not drift relative to the earth.
+\begin{equation}
+\label{eq:magnet}
+m_{IMU} = R^{TA} m + B_m + \eta_b \in \{B\}
+\end{equation}
+
+The three sensor models can be combined to provide a more accurate estimate of the drones true attitude. Using all three sensors on the IMU a more robust estimate of the true attitude of the drone can be achieved. Equation~\ref{eq:combinedestimate} represents such a model.
+
+\begin{equation}
+\label{eq:combinedestimate}
+\begin{split}
+\dot{\hat{R}} :=& \hat{R} \left (\Omega_{IMU} - \hat{b} \right )_x - \alpha\\
+\dot{\hat{b}} :=& k_b \alpha\\
+\alpha :=& \left (\frac{k_a}{g^2} ((\hat{R}^T \vec{z}) \times \bar{a}_{IMU}) + \frac{k_m}{|m^A|^2} ((\hat{R}^T m^A) \times m_{IMU}) \right )_x
+\end{split}
+\end{equation}
+
+\subsection{Estimating Translational Velocity}
+Estimating velocities is useful in determining the position of the drone in space. These velocities are estimated using the IMU measurements just as the attitude estimate was made previously in equation~\ref{eq:combinedestimate}.
+
+Assuming that the attitude estimate $\dot{\hat{R}}$ is a good estimate we are able to estimate the horizontal component velocity vectors using equation~\ref{eq:velocities}.
+\begin{equation}
+\label{eq:velocities}
+\dot{\hat{v}}_h = -g P_h^T \left ( \hat{R} \vec{z} + \hat{R} D\hat{R}^T P_h^T \hat{v}_h \right ) - k_w (\hat{v}_h - v_h)
+\end{equation}
+This estimate further integrates the measurements from the IMU with the estimated attitude of the aircraft to estimate the horizontal velocity.
+
+\subsection{Estimating Position}
+Using the above equations to estimate both the attitude of the aircraft as well as the velocity of the aircraft relative to a fixed point. It becomes possible to estimate the position of the drone in time. This knowledge allows for morecomplex control behavior such as moving in a circle or flying to different points of interest. All complex flying behavior requires estimates of the pose of the aircraft as it is flying.
+
+It is known that the estimates that come from simply integrating the IMU measurements is not accurate enough to maintain flight accurate estimates for long flights. The IMU measurement integration has propagating errors that will increase the longer the drone is flying. This is a limitation of solely relying on the IMU for pose estimation. Today it is common to add new sensor information in the loop to better estimate the drones pose during light. A popular solution to this problem is introducing IR-camera systems that track the position of the drone in real-time. This provides and absolute estimate of the pose of the aircraft within the tracked space of the IR system.
+
+There are other methods that help limit the increase of drift to the pose of the drone:
+\begin{itemize}
+\item GPS will help prevent the drifting of the pose estimate of the drone as it provides an absolute estimate of the position of the drone. This accomplished using a satellites that are in geosynchronous orbit around the earth.
+\item Visual sensors or cameras can help reduce estimate drift by performing landmark tracking and visual SLAM. Tracking landmarks will give a local reference point for the drone that will not drift with time.
+\item Lidar or laser range finders can also help with this as they sense the $R^3$ environment directly and can help provide similar estimates as visual systems.
+\end{itemize}
+Most of the additional sensor described above come at a cost. This cost may be due to weight or computational complexity of the problem. With the new data processing it can be very difficult for light weight drone platforms.
+
+\section{Modern Approaches}
+This section will give a brief overview of more modern methods for performing localization of the drone while flying. These papers address real-world problems with localization and propose methods to increase the probability of correct localization.
+
+\section{Limits to the Consistency of EKF-Based SLAM}
+In \cite{juanlimits} the authors address the limitation of the EKF for its use in SLAM. They show how an EKF when used to generate large scale maps quickly diverges from the truth and becomes inconsistent. The main issue with the EKF that introduces these errors is the linearization of the problem. The EKF linearizes the non-linear model of the drone in time to produce an estimate of the drones position. This modification provides a very computationally tractable solution.
+
+The paper shows that it is important to look into other methods to formalize the SLAM problem. Investigate nonlinear and non-Gaussian methods to handle large environments as these methods currently are computationally difficult to perform on a drone platform \cite{juanlimits}.
+
+\section{Real-Time Simultaneous Localization and mapping with a Single Camera}
+In \cite{davison2003real} the authors propose a method of SLAM using a single monocular camera. vision based methods of SLAM are typically relegated to off-line methods that are not performed in real-time. This is due to the computational complexity of image processing methods used to perform SLAM.
+
+The authors present a top-down Bayesian framework for single camera localization \cite{davison2003real}. The main contribution of this work is providing a real-time method for SLAM. To handle the complexity of the visual features they use a sparse set of the visible features. Using a sparse set of features has the advantage of reduced computational complexity to allow for real-time performance. Spare features rely more heavily on maintaining strong landmarks in the camera.
+
+The papers proposed method is limited to highly structured and spatially dense features. the method only works in indoor experimental setups and is not meant to work in complex outdoor environments. This paper marks one the initial uses of Visual SLAM in real-time scenarios.
+\section{Real-time Dense Appearance-Based SLAM for RGB-D sensors}
+in \cite{audras2011real} the authors present a method of performing real-time SLAM using dense 3D matching of image frames. This is critically different from sparse feature matching as it uses the entire image frame to localize the camera in the 3D environment. the central limitation of this method comes from the sensor itself as current RGB-D sensors do not perform well in outdoor environments as many rely on structure IR projections on the geometry of the environment. This does not function in outdoor environment as the sun is a vastly more powerful source of IR light.
+
+\cite{audras2011real} provides a model for encoding the transition from one scene view of the camera to the next frame. This represents the warping transformation between one frame to the next. This model is represented as the 3D warping function: $w(P^*, T_{IR}, T_{PR}, K, K_{IR}, P^*_{PR}, \bar{T}(t))$. Based on this model a nonlinear cost function is minimized to acquire an estimate of the pose and trajectory of the camera. Equation~\ref{eq:minimization} shows the cost function used to estimate the pose and trajectory of the camera.
+\begin{equation}
+\label{eq:minimization}
+C(x) = \sum_{P^* \in R^*} \left ( I( w(P^*; T(x)\hat{T})) - I^*(P^*) \right )^2
+\end{equation}
+An iterative approach is used to minimize equation~\ref{eq:minimization}. Gradient descent is used to iteratively provide a good estimate. Iterative have advantages and weaknesses associated with there computational complexity. In many cases there is no good stopping criteria and acquiring a good solution is not guaranteed. To deal with this limitation a finite number of iterations can be used or one can increase the allowed error in the result. This will guarantee that the each estimate can be achieved in real-time.
+
+\section{Self-Calibrating and Visual SLAM with a Multi-Camera System on a Micro Aerial Vehicle}
+In \cite{heng2015self} the authors propose a method of real-time SLAM using multiple cameras on lightweight drone platform. The central contribution of this work is in providing loop closure in real-world environments. The use of loop closure in SLAM is an important method to prevent drift in visual SLAM systems.
+
+Loop closure is a method of detecting when a sensor system has returned to the same location twice. This is effectively represented by a drone moving in a circle and returning the same start position. The error correction from recognizing the same location can propagate through all previous sensor measurements to improve the overall map of the environment. Loop closure allows for the creation of accurate maps.
+\section{Real-Time 6-DOF Monocular Visual SLAM in a Large-Scale Environment}
+In \cite{lim2014real} the authors propose a SLAM method for large-scale real-world environments. This method is able to handle complex datasets at 10fps. This produces a very capable system for car systems however 10fps is not adequate update for a drone system and other methods would be necessary to integrate in between updates of the SLAM system. A standard EKF IMU approach could produce the intermediary steps to control the drone and the SLAM method could be used to prevent large drifts in the EKF.
+
+\section{Conclusion}
+In conclusion the localization and mapping of an environment in real-time is a difficult and open problem. Many optimizations can be made based on the assumptions of the environment and modern hardware is making it possible to have reliable solutions to SLAM on a lightweight drone platform. Many of the solutions above do not rely on GPS to permit accurate localization. This is a critical improvement from other methods as there are many ways in which GPS can be disabled or is simply not available. Any reliable method for performing SLAM should not rely on GPS to work properly. SLAM is an interesting field of robotics especially when the limitations of the drone platform are considered.
 
 
 \bibliographystyle{IEEEtran}
